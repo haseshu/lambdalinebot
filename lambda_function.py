@@ -200,15 +200,16 @@ def lambda_handler(event, context):
         if "予定" in text:
             clientLambda = boto3.client("lambda")
             params = {"body" : text}
+            print("予定ここから")
             res = clientLambda.invoke(
                 FunctionName="LambdaGoogleCalender",
                 InvocationType="RequestResponse",
                 Payload=json.dumps(params)
             )
-            print("json="+json.loads(res.read()))
             text_kekka=json.loads(res['Payload'].read())
+            text_kekka=text_kekka["body"]
 
-        print("text="+text_kekka)
+        print(text_kekka)
         line_bot_api.reply_message(line_event.reply_token, TextSendMessage(text=text_kekka))
 
     try:

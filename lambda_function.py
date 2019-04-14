@@ -4,7 +4,7 @@ from linebot import (
     LineBotApi, WebhookHandler
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
+    MessageEvent, TextMessage, TextSendMessage,LocationMessage
 )
 from linebot.exceptions import (
     LineBotApiError, InvalidSignatureError
@@ -142,6 +142,13 @@ class Janken:
 				kekka = "ぼくはパー\n君の勝ち"
 		return kekka
 
+#位置情報から最寄りの駅を割り出して送信する
+class Location:
+
+    #現在地から駅の場所を送信するメイン
+     def LocationToStation(self,latitude,longitude):
+         print("現在地から駅の場所を送信するメイン")
+
 
 #おうむ返しここから
 channel_secret = os.getenv('LINE_CHANNEL_SECRET', None)
@@ -171,6 +178,7 @@ def lambda_handler(event, context):
 
     @handler.add(MessageEvent, message=TextMessage)
     def message(line_event):
+
         text = line_event.message.text
         text_kekka = text
 	#じゃんけんかどうか判断
@@ -211,6 +219,17 @@ def lambda_handler(event, context):
 
         print(text_kekka)
         line_bot_api.reply_message(line_event.reply_token, TextSendMessage(text=text_kekka))
+
+    #位置情報の時に使う
+    @handler.add(MessageEvent, message=LocationMessage)
+    def location(line_event):
+        #位置情報が来ていれば、simpleapiにつなぐ
+        if line_event.message.type == "location":
+            latitude =line_event.message.latitude #緯度
+            longitude=line_event.message.longitude #経度
+            station =Location()
+            station.LocationToStation(latitude,longitude)
+
 
     try:
         handler.handle(body, signature)

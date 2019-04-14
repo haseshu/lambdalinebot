@@ -16,6 +16,7 @@ import urllib.parse
 import urllib.request
 import json
 import boto3
+import xmltodict
 
 logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
@@ -144,10 +145,36 @@ class Janken:
 
 #位置情報から最寄りの駅を割り出して送信する
 class Location:
-
+    #simpleapi利用例
+    #http://map.simpleapi.net/stationmap?x=139.75271700&y=35.70481800
+    SIMPLE_API_URL="http://map.simpleapi.net/stationmap?"
     #現在地から駅の場所を送信するメイン
-     def LocationToStation(self,latitude,longitude):
-         print("現在地から駅の場所を送信するメイン")
+    def LocationToStation(self,latitude,longitude):
+        print("現在地から駅の場所を送信するメイン")
+        station_xml = self.Get_Station_Info(latitude,longitude)
+
+        for station_list in station_xml['result']:
+            print("駅")
+            print(station_list)
+
+        return self.LineBot_Result(station_list)
+
+    def Get_Station_Info(self,latitude,longitude):
+        try:
+            url = Location.SIMPLE_API_URL + "x=" + str(latitude) + "&y=" + str(longitude)
+            html = urllib.request.urlopen(url)
+            print(html)
+            html_xml = xmltodict.parse(html.read())
+
+        except Exception as e:
+            print ("Exception Error: ", e)
+            sys.exit(2)
+        return html_xml
+
+    def LineBot_Result(self,xml):
+
+        return json.dumps(xml)
+
 
 
 #おうむ返しここから

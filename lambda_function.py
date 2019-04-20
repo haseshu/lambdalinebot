@@ -14,6 +14,7 @@ import random
 import sys
 import urllib.parse
 import urllib.request
+import requests
 import json
 import boto3
 import xmltodict
@@ -147,7 +148,7 @@ class Janken:
 class Location:
     #simpleapi利用例
     #http://map.simpleapi.net/stationmap?x=139.75271700&y=35.70481800
-    SIMPLE_API_URL="http://map.simpleapi.net/stationmap?"
+    SIMPLE_API_URL="http://map.simpleapi.net/stationapi?"
     #現在地から駅の場所を送信するメイン
     def LocationToStation(self,latitude,longitude):
         print("現在地から駅の場所を送信するメイン")
@@ -161,20 +162,45 @@ class Location:
 
     def Get_Station_Info(self,latitude,longitude):
         try:
-            url = Location.SIMPLE_API_URL + "x=" + str(latitude) + "&y=" + str(longitude)
+            url = Location.SIMPLE_API_URL + "x=" + str(latitude) + "&y=" + str(longitude)+"&output=json"
             html = urllib.request.urlopen(url)
             print(html)
-            html_xml = xmltodict.parse(html.read())
+            print(html.read())
+            html_json = json.loads(html.read())
+            print(html_json)
 
         except Exception as e:
             print ("Exception Error: ", e)
             sys.exit(2)
-        return html_xml
+        return html_json
 
     def LineBot_Result(self,xml):
 
         return json.dumps(xml)
 
+#英和翻訳ここから
+class TransLater:
+    TRANSLATE_URL="https://script.google.com/macros/s/AKfycbz3OSPifvcoGNeO4RcoU59DZxcRfK6u4QuRKGiTHtWflNsEtX-a/exec?text="
+    SOURCE="&source="
+    TARGET="&target="
+
+#もし翻訳なら、ここに記載する
+#https://script.google.com/macros/s/AKfycbweJFfBqKUs5gGNnkV2xwTZtZPptI6ebEhcCU2_JvOmHwM2TCk/exec?text=こんにちわ&source=ja&target=en
+    def Translater_Japanese_To_English(self,Japanese):
+        url = TransLater.TRANSLATE_URL + Japanese + TransLater.SOURCE + "ja" + TransLater.TARGET + "en"
+        print(url)
+        html = requests.get(url)
+        print(html)
+        print(html.text)
+        return html.text
+
+    def Translater_English_To_Japanese(self,English):
+        url = TransLater.TRANSLATE_URL + English + TransLater.SOURCE + "en" + TransLater.TARGET + "ja"
+        print(url)
+        html = requests.get(url)
+        print(html)
+        print(html.text)
+        return html.text
 
 
 #おうむ返しここから
@@ -215,9 +241,23 @@ def lambda_handler(event, context):
             kekka = a.Janken(text)
             text_kekka = kekka
 
+    #翻訳かどうかチェック
+    #頭に"翻訳"とあれば日本語→英語、頭に"Translate"とあれば英語→日本語
+        if text.startswith("翻訳"):
+            t= TransLater()
+            text_trans=text[len("翻訳"):]
+            print(text_trans)
+            text_kekka = t.Translater_Japanese_To_English(text_trans)
+        elif text.startswith("Translate"):
+            t= TransLater()
+            text_trans=text[len("Translate"):]
+            print(text_trans)
+            text_kekka = t.Translater_English_To_Japanese(text_trans)
+
+
         #天気かどうか判断
         #天気なら、textの中身を天気の結果に置き換える
-        if "天気" in text:
+        elif "天気" in text:
             day = 0
             describe = False
             if "今日" in text:
@@ -232,7 +272,7 @@ def lambda_handler(event, context):
             text_kekka =  tenki.wheter_news(day,describe)
 
         #予定の文字があればGoogleCalendarLamndaへ連携
-        if "予定" in text:
+        elif "予定" in text:
             clientLambda = boto3.client("lambda")
             params = {"body" : text}
             print("予定ここから")
